@@ -131,13 +131,21 @@ class Nasdaq:
 
     def find_company_symbol(self, symbol):
         assert (self.companies is not None)
-        print ('processing', symbol)
 
-        company = filter(lambda elem: elem['Symbol'] == symbol, self.companies)[0]
+        try:
+            company = filter(lambda elem: elem['Symbol'] == symbol, self.companies)[0]
+        except IndexError:
+            return None
 
-        page = urllib2.urlopen(self.sym_lookup_url+symbol).read()
+        urlfh = urllib2.urlopen(self.sym_lookup_url+symbol)
+        page = urlfh.read()
+        urlfh.close()
+
         soup = BeautifulSoup(page, 'html.parser')
-        tr = soup.select('.genTable table tbody tr')[0]
+        try:
+            tr = soup.select('.genTable table tbody tr')[0]
+        except IndexError:
+            return None
 
         my_dict = {}
         while tr is not None:
@@ -176,18 +184,23 @@ class Nasdaq:
         return company['data']
 
     def collect_closing(self):
-        for elem in self.companies:
+        for i, elem in enumerate(self.companies):
+            print ('%s/%s' % (i, len(self.companies)), elem['Symbol'])
             self.find_company_symbol(elem['Symbol'])
+            if i > 0 and (i % 100) == 0:
+                self.save_dict_file()
+
         self.save_dict_file()
 
     def save_dict_file(self):
+        print ('save_dict_file')
         with open(self.dict_file_name, 'wb') as handle:
             pickle.dump(self.companies, handle)
 
     def read_dict_file(self):
         with open(self.dict_file_name, 'rb') as handle:
             self.companies = pickle.loads(handle.read())
-        print len(self.companies)
+        # print len(self.companies)
 
     @staticmethod
     def print_ticker(dict_list):
@@ -215,12 +228,12 @@ if __name__ == '__main__':
 
     # read back created data
     nasdaq.read_dict_file()
-    nasdaq.collect_closing()
+    # nasdaq.collect_closing()
 
     # print nasdaq.find_company_symbol('FCCY')
     # print nasdaq.find_company_symbol('MSFT')
-    # data = nasdaq.find_company_symbol('BPTH')
-    # print data[0]["Today's High /Low"]
+    data = nasdaq.find_company_symbol('ZNGA')
+    print data[0]["Today's High /Low"]
 
     # nasdaq.find_company_symbol('BPTH')
 
