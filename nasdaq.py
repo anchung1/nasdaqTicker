@@ -129,17 +129,29 @@ class Nasdaq:
             pages.append(page + str(num))
         return pages
 
-    def find_company_symbol(self, symbol):
+    def find_company_symbol(self, symbol, date=None):
         assert (self.companies is not None)
 
         try:
-            company = filter(lambda elem: elem['Symbol'] == symbol, self.companies)[0]
+            company = filter(lambda elem: elem['Symbol'] == symbol, self.companies).pop(0)
         except IndexError:
             return None
 
-        urlfh = urllib2.urlopen(self.sym_lookup_url+symbol)
-        page = urlfh.read()
-        urlfh.close()
+        if date is not None:
+            try:
+                check_date = filter(lambda elem: elem['Date of Close Price'] == date, company['data'])
+                if len(check_date) > 0:
+                    print 'have data'
+                    return company['data']
+            except KeyError:
+                return None
+
+        try:
+            urlfh = urllib2.urlopen(self.sym_lookup_url+symbol, timeout=10)
+            page = urlfh.read()
+            urlfh.close()
+        except urllib2.URLError:
+            return None
 
         soup = BeautifulSoup(page, 'html.parser')
         try:
@@ -183,10 +195,10 @@ class Nasdaq:
 
         return company['data']
 
-    def collect_closing(self):
+    def collect_closing(self, today=None):
         for i, elem in enumerate(self.companies):
             print ('%s/%s' % (i, len(self.companies)), elem['Symbol'])
-            self.find_company_symbol(elem['Symbol'])
+            self.find_company_symbol(elem['Symbol'], today)
             if i > 0 and (i % 100) == 0:
                 self.save_dict_file()
 
@@ -201,6 +213,10 @@ class Nasdaq:
         with open(self.dict_file_name, 'rb') as handle:
             self.companies = pickle.loads(handle.read())
         # print len(self.companies)
+
+    def get_today(self):
+        data = self.find_company_symbol('MSFT')[-1]
+        return data['Date of Close Price']
 
     @staticmethod
     def print_ticker(dict_list):
@@ -228,12 +244,15 @@ if __name__ == '__main__':
 
     # read back created data
     nasdaq.read_dict_file()
-    # nasdaq.collect_closing()
+    today = nasdaq.get_today()
+    nasdaq.collect_closing(today)
 
     # print nasdaq.find_company_symbol('FCCY')
     # print nasdaq.find_company_symbol('MSFT')
-    data = nasdaq.find_company_symbol('ZNGA')
-    print data[0]["Today's High /Low"]
+    # data = nasdaq.find_company_symbol('ZSAN')
+    # print data.pop()
+    # nasdaq.save_dict_file()
+
 
     # nasdaq.find_company_symbol('BPTH')
 
