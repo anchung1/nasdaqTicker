@@ -1,8 +1,9 @@
 import subprocess
+import time
 
 
 def run_process():
-    ret = subprocess.check_call(['python', 'nasdaq.py'])
+    ret = subprocess.check_call(['python', 'nyse.py'])
     return ret
 
 do_run = True
@@ -14,7 +15,7 @@ while do_run is True:
             do_run = False
     except:
         print 'detected error'
-
+        time.sleep(3)
 
 
 
