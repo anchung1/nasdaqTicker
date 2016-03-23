@@ -2,6 +2,8 @@ import urllib2
 from bs4 import BeautifulSoup
 import re
 import pickle
+import sys
+import argparse
 
 
 class Nyse:
@@ -132,10 +134,9 @@ class Nyse:
                 # separating on comma only also separates Fund and Inc
                 value = line.strip().split('",')
                 value.pop()
-                value = map(lambda elem: elem.replace('\"', ''), value)
+                value = map(lambda elem: elem.replace('\"', '').strip(), value)
 
             self.companies.append(dict(zip(key, value)))
-
         # print self.companies[-1]
 
     def get_page_links(self):
@@ -290,7 +291,7 @@ class Nyse:
         with open(self.dict_file_name, 'rb') as handle:
             self.companies = pickle.loads(handle.read())
         print len(self.companies)
-        # print self.companies
+        # print self.companies[-1]
 
     def get_today(self, symbol):
         data = self.find_company_symbol(symbol)[-1]
@@ -313,16 +314,49 @@ class Nyse:
 
 
 if __name__ == '__main__':
-    nyse = Nyse()
+    market = Nyse()
+    print sys.argv
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-type', default='nyse')
+    parser.add_argument('-dict', default='None')
+    parser.add_argument('-collect', default='None')
+
+    args = parser.parse_args()
+
+    if args.type == 'nasdaq':
+        market.nyse_csv = 'nasdaq.csv'
+        market.dict_file_name = 'nasdaq.txt'
+        sample_symbol = 'MSFT'
+    else:
+        market.nyse_csv = 'nyse.csv'
+        market.dict_file_name = 'nyse.txt'
+        sample_symbol = 'DDD'
+
+    if args.dict == 'yes':
+        market.make_company_dict_csv()
+        market.save_dict_file()
+
+    if args.collect == 'yes':
+        market.read_dict_file()
+        today = market.get_today(sample_symbol)
+        market.collect_closing(today)
+
+
+    # market.read_dict_file()
+
+    # print args.type
+    # print args.mode
+
     # use this to start database
     # nyse.make_company_dict_csv()
     # nyse.save_dict_file()
 
 
     # read back created data
-    nyse.read_dict_file()
-    today = nyse.get_today('DDD')
-    nyse.collect_closing(today)
+    # nyse.read_dict_file()
+    # today = nyse.get_today('DDD')
+    # nyse.collect_closing(today)
 
     # print nyse.find_company_symbol('FCCY')
     # print nyse.find_company_symbol('MSFT')
